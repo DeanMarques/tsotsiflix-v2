@@ -1,0 +1,58 @@
+version: "3.3"
+
+services:
+    nginx:
+        build:
+            context: .
+            dockerfile: ./Dockerfiles/nginx.Dockerfile
+        volumes:
+            - /mnt/usb/tsotsiflix/mediafiles/movies:/var/www/tsotsiflix/storage/app/public/movies
+            - /mnt/usb/tsotsiflix/mediafiles/movie_posters:/var/www/tsotsiflix/storage/app/public/movie_posters
+            - /mnt/usb/tsotsiflix/letsencrypt:/etc/letsencrypt
+            - /home/pi/tsotsiflix-main/nginx/tsotsiflix-prod.ddns.net:/etc/nginx/conf.d/tsotsiflix-prod.ddns.net  
+        restart: unless-stopped  
+        ports:
+            - 80:80
+            - 443:443
+        networks:
+            - nginx_network
+
+    php:
+        build:
+            context: .
+            dockerfile: ./Dockerfiles/php.Dockerfile
+            args:
+                TAG: deanmarqes/tsotsiflix-php_arm64
+                platform: linux/arm64
+        volumes:
+            - /mnt/usb/tsotsiflix/mediafiles/movies:/var/www/tsotsiflix/storage/app/public/movies
+            - /mnt/usb/tsotsiflix/mediafiles/movie_posters:/var/www/tsotsiflix/storage/app/public/movie_posters
+            - /mnt/usb/downloads:/var/www/tsotsiflix/storage/app/public/downloads
+        restart: unless-stopped
+        ports:
+            - 9000:9000
+        networks:
+            - nginx_network
+
+    mysql:
+        image: mysql:latest
+        ports:
+            - 3306:3306
+        environment:
+            MYSQL_DATABASE: tsotsiflix
+            MYSQL_USER: laravel
+            MYSQL_PASSWORD: laravel%4342115
+            MYSQL_ROOT_PASSWORD: D3@nm3830
+        restart: unless-stopped      
+        volumes:
+            - /mnt/usb/tsotsiflix/mysql:/var/lib/mysql
+        networks:
+            - nginx_network
+
+volumes:
+    nginx_network:
+        driver: bridge
+
+networks:
+    nginx_network:
+        driver: bridge

@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: ./
+      dockerfile: ./docker/php/php.Dockerfile
+    working_dir: /var/www/dev
+    volumes:
+      - ./:/var/www/dev:rw 
+      # - /mnt/usb/tsotsiflix/mediafiles/movies:/var/www/tsotsiflix/storage/app/public/movies
+      # - /mnt/usb/tsotsiflix/mediafiles/movie_posters:/var/www/tsotsiflix/storage/app/public/movie_posters
+      # - /mnt/usb/tsotsiflix/letsencrypt:/etc/letsencrypt
+      # - /home/pi/tsotsiflix-main/nginx/tsotsiflix-prod.ddns.net:/etc/nginx/conf.d/tsotsiflix-prod.ddns.net    
+    ports:
+      - '80:80'
+      - '443:443'  
+
+  database:
+    depends_on:
+      - web
+    build:
+      context: ./
+      dockerfile: ./docker/mysql/Dockerfile
+    volumes:
+      - ./docker/mysql/data:/var/lib/mysql
+    environment:
+        MYSQL_DATABASE: tsotsiflix
+        MYSQL_USER: laravel
+        MYSQL_PASSWORD: laravel%4342115
+        MYSQL_ROOT_PASSWORD: D3@nm3830
+    ports:
+      - '3306:3306'
+
+volumes:
+    nginx_network:
+        driver: bridge
+
+networks:
+    nginx_network:
+        driver: bridge
