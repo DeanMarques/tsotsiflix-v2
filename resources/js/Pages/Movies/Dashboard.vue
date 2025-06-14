@@ -13,7 +13,7 @@
                      :class="{ 'active': index === 0 }">
                     <img :src="movie.backdrop_path" 
                          :alt="movie.title"
-                         class="w-100 h-100">
+                         class="w-100 h-100 hero-image-bg">
                     <div class="carousel-caption">
                         <div class="position-relative text-start col-12 col-md-6">
                             <h1 class="display-4 fw-bold mb-3">{{ movie.title }}</h1>
