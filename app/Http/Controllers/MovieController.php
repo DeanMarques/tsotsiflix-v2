@@ -68,7 +68,7 @@ class MovieController extends Controller
 
         // Only get carousel movies if no search or genre filter
         $carouselMovies = (!$search && !$currentGenre) 
-            ? Movie::orderBy('created_at', 'desc')
+            ? Movie::orderBy('release_date', 'desc')
                 ->take(10)
                 ->get()
                 ->map(function ($movie) {
