@@ -56,7 +56,7 @@
                             </button>
                              <button @click="moveMovies" class="btn btn-danger" :disabled="form.processing">
                                 <i class="bi bi-search me-2"></i>
-                                {{ form.processing ? 'Moving...' : 'Scan for New Movies' }}
+                                {{ form.processing ? 'Moving...' : 'Move movies' }}
                             </button>
                         </div>
                        
