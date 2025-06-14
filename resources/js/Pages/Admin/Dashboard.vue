@@ -54,7 +54,12 @@
                                 <i class="bi bi-search me-2"></i>
                                 {{ form.processing ? 'Scanning...' : 'Scan for New Movies' }}
                             </button>
+                             <button @click="moveMovies" class="btn btn-danger" :disabled="form.processing">
+                                <i class="bi bi-search me-2"></i>
+                                {{ form.processing ? 'Moving...' : 'Scan for New Movies' }}
+                            </button>
                         </div>
+                       
 
                         <div class="card bg-dark border-secondary">
                             <div class="card-body">
@@ -199,6 +204,12 @@ const form = useForm({});
 
 function scanMovies() {
     form.post(route('admin.movies.scan'), {
+        preserveScroll: true
+    });
+}
+
+function moveMovies() {
+    form.post(route('admin.movies.move'), {
         preserveScroll: true
     });
 }

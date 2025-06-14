@@ -34,6 +34,7 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     Route::get('/dashboard', [App\Http\Controllers\AdminController::class, 'index'])->name('admin.dashboard');
     Route::get('/movies', [App\Http\Controllers\AdminController::class, 'movies'])->name('admin.movies');
     Route::post('/movies/scan', [App\Http\Controllers\MovieController::class, 'scanMovies'])->name('admin.movies.scan');
+    Route::post('/movies/move', [App\Http\Controllers\MovieController::class, 'moveMovies'])->name('admin.movies.move');
     Route::delete('/movies/{id}', [App\Http\Controllers\AdminController::class, 'deleteMovie'])->name('admin.movies.delete');
     Route::get('/users', [App\Http\Controllers\AdminController::class, 'users'])->name('admin.users');
     Route::put('/users/{id}', [App\Http\Controllers\AdminController::class, 'updateUser'])->name('admin.users.update');

@@ -101,7 +101,7 @@ class MovieController extends Controller
     }
 
     
-
+ 
     public function scanMovies()
     {
         Log::info('Starting movie scan');
@@ -176,6 +176,56 @@ class MovieController extends Controller
 
         return redirect()->route('dashboard');
     }
+
+    
+    public function moveMovies()
+    {
+        $sourceDir = '/home/forge/downloads/complete/';
+        $destinationDir = '/mnt/usb/tsotsiflix/mediafiles/movies/';
+
+        try {
+            // Get all directories in the source folder
+            $movieDirs = array_filter(glob($sourceDir . '*'), 'is_dir');
+
+            foreach ($movieDirs as $movieDir) {
+                // Get the movie folder name (which will be the new filename)
+                $folderName = basename($movieDir);
+                
+                // Find the mp4 file in the movie directory
+                $mp4Files = glob($movieDir . '/*.mp4');
+                
+                if (!empty($mp4Files)) {
+                    $sourceFile = $mp4Files[0]; // Take the first mp4 file found
+                    $newFilename = $folderName . '.mp4';
+                    $destinationFile = $destinationDir . $newFilename;
+
+                    // Check if destination directory exists, create if not
+                    // if (!is_dir($destinationDir)) {
+                    //     mkdir($destinationDir, 0755, true);
+                    // }
+
+                    // Move and rename the file
+                    if (rename($sourceFile, $destinationFile)) {
+                        // Remove the now empty source directory
+                        rmdir($movieDir);
+                        Log::info("Successfully moved and renamed: {$folderName}");
+                    } else {
+                        Log::error("Failed to move file: {$folderName}");
+                    }
+                } else {
+                    Log::warning("No MP4 file found in directory: {$folderName}");
+                }
+            }
+
+            return response()->json(['message' => 'Movie files processed successfully']);
+        } catch (\Exception $e) {
+            Log::error('Error moving movies: ' . $e->getMessage());
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+
+
 
     private function syncGenres()
     {
