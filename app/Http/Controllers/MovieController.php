@@ -288,7 +288,7 @@ class MovieController extends Controller
         $token = encrypt([
             'movie_id' => [
                 'id' => $movie->id,
-                'expires' => now()->addSeconds(10)->timestamp // Shorter expiry
+                'expires' => now()->addMinutes(35)->timestamp // Shorter expiry
             ],
             'user_id' => auth()->id() // Add user ID to token
         ]);
