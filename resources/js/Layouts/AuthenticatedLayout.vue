@@ -3,7 +3,7 @@ import { ref, onMounted } from 'vue';
 import TsotsiflixLogo from '@/Components/TsotsiflixLogo.vue';
 import { Link } from '@inertiajs/vue3';
 
-const props = defineProps({
+defineProps({
     genres: {
         type: Array,
         default: () => []
@@ -52,7 +52,7 @@ onMounted(() => {
                         <li class="nav-item">
                             <Link
                                 :href="route('dashboard')"
-                                class="nav-link text-light"
+                                class="nav-link text-white"
                                 :class="{ 'active': route().current('dashboard') }"
                             >
                                 Home
@@ -60,7 +60,7 @@ onMounted(() => {
                         </li>
                         <li class="nav-item dropdown">
                             <button
-                                class="nav-link dropdown-toggle text-light border-0 bg-transparent"
+                                class="nav-link text-white dropdown-toggle text-light border-0 bg-transparent"
                                 type="button"
                                 id="genreDropdown"
                                 data-bs-toggle="dropdown"
@@ -73,45 +73,47 @@ onMounted(() => {
                                 aria-labelledby="genreDropdown"
                             >
                                 <li>
-                                    <button
-                                        class="dropdown-item"
-                                        @click="$emit('genre-selected', 'all')"
+                                    <Link
+                                        :href="route('dashboard')"
+                                        class="dropdown-item text-white"
+                                        preserve-scroll
                                     >
                                         All Genres
-                                    </button>
+                                    </Link>
                                 </li>
                                 <li v-for="genre in genres" :key="genre.id">
-                                    <button
-                                        class="dropdown-item"
-                                        @click="$emit('genre-selected', genre.id)"
+                                    <Link
+                                        :href="route('dashboard', { genre: genre.id })"
+                                        class="dropdown-item text-white"
+                                        preserve-scroll
                                     >
                                         {{ genre.name }}
-                                    </button>
+                                    </Link>
                                 </li>
                             </ul>
                         </li>
                         <li class="nav-item">
-                            <a href="#" class="nav-link text-light">My List</a>
+                            <a href="#" class="nav-link text-white">My List</a>
                         </li>
                     </ul>
 
                     <!-- User Dropdown -->
                     <div class="dropdown">
                         <button
-                            class="btn btn-link dropdown-toggle text-light text-decoration-none"
+                            class="btn btn-link dropdown-toggle text-white text-decoration-none"
                             type="button"
                             id="userDropdown"
                             data-bs-toggle="dropdown"
                             aria-expanded="false"
                         >
-                            <img 
+                            <!-- <img 
                                 src="https://api.dicebear.com/7.x/initials/svg?seed=tsotsiflix"
                                 alt="Profile"
                                 class="rounded-circle me-2"
                                 width="32"
                                 height="32"
-                            />
-                            {{ $page.props.auth.user.name }}
+                            /> -->
+                            {{ $page.props.auth.user.username }}
                         </button>
                         <ul
                             class="dropdown-menu dropdown-menu-end bg-dark"
@@ -123,6 +125,14 @@ onMounted(() => {
                                     class="dropdown-item"
                                 >
                                     Profile
+                                </Link>
+                            </li>
+                            <li v-if="$page.props.auth.user.is_admin">
+                                <Link
+                                    :href="route('admin.dashboard')"
+                                    class="dropdown-item"
+                                >
+                                    Admin
                                 </Link>
                             </li>
                             <li>

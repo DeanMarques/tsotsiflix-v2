@@ -33,6 +33,7 @@ RUN rm -rf /var/lib/apt/lists/* \
  && apt-get update \
  && apt-get install -y \
     nginx \
+    nginx-extras \
     certbot \
     python3-certbot-nginx \
     php${PHP_VERSION}-fpm \

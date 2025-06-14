@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Movie;
 use App\Models\Genre;
 use App\Services\TmdbService;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Inertia\Inertia;
+
 
 class MovieController extends Controller
 {
@@ -20,13 +22,14 @@ class MovieController extends Controller
     {
         $page = request()->input('page', 1);
         $perPage = 6; // Load 6 movies at a time for smoother infinite scroll
+        $currentGenre = request()->input('genre');
 
-        $query = Movie::query()->orderBy('title');
+        $query = Movie::query()->orderBy('release_date', 'desc');
         
         // Apply genre filter if selected
-        if ($genre = request()->input('genre')) {
-            $query->whereHas('genres', function($q) use ($genre) {
-                $q->where('genres.id', $genre);
+        if ($currentGenre) {
+            $query->whereHas('genres', function($q) use ($currentGenre) {
+                $q->where('genres.id', $currentGenre);
             });
         }
 
@@ -59,12 +62,12 @@ class MovieController extends Controller
 
         $genres = Genre::orderBy('name')->get();
 
-        // Get a separate query for carousel movies (most recent 5)
+        // Get carousel movies (most recent 5)
         $carouselMovies = Movie::orderBy('created_at', 'desc')
             ->take(5)
             ->get()
             ->map(function ($movie) {
-               return [
+                return [
                     'id' => $movie->id,
                     'tmdb_id' => $movie->tmdb_id,
                     'title' => $movie->title,
@@ -89,10 +92,11 @@ class MovieController extends Controller
                 ];
             });
 
-        return Inertia::render('Dashboard', [
+        return Inertia::render('Movies/Dashboard', [
             'movies' => $movies,
             'genres' => $genres,
             'carouselMovies' => $carouselMovies,
+            'currentGenre' => $currentGenre
         ]);
     }
 

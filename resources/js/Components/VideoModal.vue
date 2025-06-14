@@ -1,5 +1,5 @@
 <template>
-    <div v-if="show" class="modal fade show d-block" tabindex="-1" aria-modal="true" role="dialog">
+    <div v-if="show" class="modal fade show d-block scrollbar-dark" tabindex="-1" aria-modal="true" role="dialog">
         <div class="modal-dialog modal-fullscreen">
             <div class="modal-content bg-dark text-white d-flex flex-column h-100">
                 <!-- Header - Consistent across all states -->
@@ -81,12 +81,12 @@
                                     </span>
                                 </div>
                                 <div class="d-flex gap-3">
-                                    <button class="btn btn-light btn-lg"
+                                    <button class="btn btn-dark btn-lg"
                                         @click="playMovie"
                                         :disabled="!movie?.local_path">
                                         <i class="bi bi-play-fill me-2"></i> Play
                                     </button>
-                                    <button class="btn btn-outline-light btn-lg"
+                                    <button class="btn btn-dark btn-lg"
                                         @click="playTrailer"
                                         :disabled="!movie?.trailer_url">
                                         <i class="bi bi-film me-2"></i> Trailer
@@ -108,20 +108,18 @@
 
                             <!-- Cast Section -->
                             <div v-if="movie.cast?.length" class="mt-4">
-                                <h6 class="fs-4 mb-3">Cast</h6>
-                                <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-6 g-4">
-                                    <div v-for="actor in movie.cast.slice(0, 6)" :key="actor.id" class="col">
-                                        <div class="card bg-dark h-100">
-                                            <img :src="actor.profile_path ? 'https://image.tmdb.org/t/p/w185' + actor.profile_path : 'https://via.placeholder.com/185x278'"
-                                                 :alt="actor.name"
-                                                 class="card-img-top"
-                                                 style="aspect-ratio: 2/3; object-fit: cover;">
-                                            <div class="card-body">
-                                                <h6 class="card-title">{{ actor.name }}</h6>
-                                                <p class="card-text text-secondary small">{{ actor.character }}</p>
-                                            </div>
-                                        </div>
-                                    </div>
+                                <p class="lead mb-3">Cast</p>
+                                <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-6 g-4">                                    
+                                    <div v-for="actor in movie.cast.slice(0, 8)" :key="actor.id" class="col text-center">
+                                        <img :src="actor.profile_path ? 'https://image.tmdb.org/t/p/w185' + actor.profile_path : 'https://via.placeholder.com/185x278'"
+                                            :alt="actor.name"
+                                            class="rounded-circle mb-2"
+                                            width="64"
+                                            height="64"
+                                            style="object-fit: cover;">
+                                        <h6 class="mb-0 small">{{ actor.name }}</h6>
+                                        <p class="text-secondary small">{{ actor.character }}</p>
+                                    </div>                                   
                                 </div>
                             </div>
                         </div>
@@ -235,7 +233,7 @@ const showInfo = () => {
 }
 
 /* Custom scrollbar styling */
-.scrollbar-dark {
+/* .scrollbar-dark {
     scrollbar-width: thin;
     scrollbar-color: rgba(255,255,255,0.2) rgba(0,0,0,0.2);
 }
@@ -251,7 +249,7 @@ const showInfo = () => {
 .scrollbar-dark::-webkit-scrollbar-thumb {
     background-color: rgba(255,255,255,0.2);
     border-radius: 4px;
-}
+} */
 
 @media (max-width: 768px) {
     .btn-lg {

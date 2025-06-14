@@ -1,6 +1,6 @@
 <script setup>
-import { useForm } from '@inertiajs/vue3';
-import { Head } from '@inertiajs/vue3';
+import { Link, useForm } from '@inertiajs/vue3';
+import TsotsiflixLogo from '@/Components/TsotsiflixLogo.vue';
 
 const form = useForm({
     username: '',
@@ -14,156 +14,120 @@ const submit = () => {
 </script>
 
 <template>
-    <Head title="Sign In - Tsotsiflix" />
-    <div class="login-container">
-        <div class="overlay"></div>
-        <div class="container">
-            <div class="row vh-100 align-items-center justify-content-center">
-                <div class="col-12 col-sm-8 col-md-6 col-lg-4">
-                    <div class="login-card">
-                        <div class="card-body p-4 p-sm-5">
-                            <h1 class="card-title text-center mb-4">Sign In</h1>
-                            
-                            <form @submit.prevent="submit">
-                                <div class="mb-4">
-                                    <input
-                                        type="text"
-                                        class="form-control netflix-input"
-                                        id="username"
-                                        placeholder="username"
-                                        v-model="form.username"
-                                        required
-                                        autofocus
-                                    >
-                                    <div v-if="form.errors.username" class="text-danger mt-1">
-                                        {{ form.errors.username }}
-                                    </div>
-                                </div>
+    <div class="min-vh-100 d-flex flex-column justify-content-center align-items-center bg-dark text-white">
+        <!-- Logo -->
+        <div class="text-center">
+            <Link href="/">
+                <TsotsiflixLogo TsotsiflixLogo className="text-decoration-none fs-1" /> 
+            </Link>
+        </div>
 
-                                <div class="mb-4">
-                                    <input
-                                        type="password"
-                                        class="form-control netflix-input"
-                                        id="password"
-                                        placeholder="Password"
-                                        v-model="form.password"
-                                        required
-                                    >
-                                    <div v-if="form.errors.password" class="text-danger mt-1">
-                                        {{ form.errors.password }}
-                                    </div>
-                                </div>
-
-                                <div class="form-check mb-4">
-                                    <input
-                                        type="checkbox"
-                                        class="form-check-input"
-                                        id="remember"
-                                        v-model="form.remember"
-                                    >
-                                    <label class="form-check-label text-muted" for="remember">
-                                        Remember me
-                                    </label>
-                                </div>
-
-                                <div class="d-grid">
-                                    <button 
-                                        type="submit" 
-                                        class="btn btn-danger btn-lg netflix-button"
-                                        :disabled="form.processing"
-                                    >
-                                        Sign In
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
+        <!-- Login Form -->
+        <div class="w-100" style="max-width: 400px;">
+            <form @submit.prevent="submit">
+                <div class="mb-3">
+                    <input
+                        id="username"
+                        v-model="form.username"
+                        type="text"
+                        class="form-control form-control-lg bg-dark text-white border-secondary"
+                        :class="{ 'is-invalid': form.errors.username }"
+                        placeholder="Username"
+                        required
+                        autofocus
+                    />
+                    <div class="invalid-feedback" v-if="form.errors.username">
+                        {{ form.errors.username }}
                     </div>
                 </div>
-            </div>
+
+                <div class="mb-3">
+                    <input
+                        id="password"
+                        v-model="form.password"
+                        type="password"
+                        class="form-control form-control-lg bg-dark text-white border-secondary"
+                        :class="{ 'is-invalid': form.errors.password }"
+                        placeholder="Password"
+                        required
+                    />
+                    <div class="invalid-feedback" v-if="form.errors.password">
+                        {{ form.errors.password }}
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <div class="form-check">
+                        <input
+                            id="remember"
+                            v-model="form.remember"
+                            type="checkbox"
+                            class="form-check-input bg-dark border-secondary"
+                            name="remember"
+                        />
+                        <label class="form-check-label text-secondary" for="remember">
+                            Remember me
+                        </label>
+                    </div>
+                </div>
+
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-danger btn-lg" :disabled="form.processing">
+                        <span v-if="form.processing" class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        Sign In
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </template>
 
 <style scoped>
-.login-container {
-    min-height: 100vh;
-    background: url('https://assets.nflxext.com/ffe/siteui/vlv3/ab4b0b22-2ddf-4d48-ae88-c201ae0267e2/0efe6360-4f6d-4b10-beb6-81e0762cfe81/ZA-en-20231030-popsignuptwoweeks-perspective_alpha_website_large.jpg') center/cover no-repeat fixed;
-    position: relative;
+
+.text-danger {
+    color: #E50914 !important;
 }
 
-.overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.8));
-    pointer-events: none;
+
+
+.text-white {
+    color: #ffffff !important;
 }
 
-.login-card {
-    background: rgba(0, 0, 0, 0.75);
-    border-radius: 4px;
-    color: white;
-    backdrop-filter: blur(10px);
+/* Placeholder styling */
+.form-control::placeholder {
+    color: #6c757d !important; /* Bootstrap's text-secondary color */
+    opacity: 1;
 }
 
-.card-title {
-    font-size: 2rem;
+.form-control:focus::placeholder {
+    opacity: 0.75;
+}
+
+.display-4 {
+    font-size: 2.5rem;
     font-weight: 500;
 }
 
-.netflix-input {
-    background: #333;
-    border: none;
-    border-radius: 4px;
-    color: white;
-    padding: 1rem 1.25rem;
-    height: auto;
-    font-size: 1rem;
+.fw-bold {
+    font-weight: 700 !important;
 }
 
-.netflix-input:focus {
-    background: #454545;
-    color: white;
-    box-shadow: none;
-    border: none;
+.form-control {
+    border: 1px solid #444;
+    border-radius: 0.25rem;
 }
 
-.netflix-input::placeholder {
-    color: #8c8c8c;
-}
-
-.form-check-input {
-    background-color: #333;
-    border-color: #737373;
-}
-
-.form-check-input:checked {
-    background-color: #E50914;
+.form-control:focus {
     border-color: #E50914;
+    box-shadow: none;
 }
 
-.netflix-button {
-    font-weight: bold;
-    font-size: 1.1rem;
-    padding: 1rem;
-    background-color: #E50914;
-    border: none;
-    transition: all 0.2s ease-in-out;
+.is-invalid {
+    border-color: #dc3545;
 }
 
-.netflix-button:hover:not(:disabled) {
-    background-color: #f40612;
-    transform: scale(1.02);
-}
-
-.netflix-button:disabled {
-    background-color: #E50914;
-    opacity: 0.7;
-}
-
-.text-danger {
-    color: #E87C03 !important;
+.invalid-feedback {
+    display: block;
 }
 </style>
