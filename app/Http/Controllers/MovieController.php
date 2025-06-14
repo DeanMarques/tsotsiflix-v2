@@ -269,62 +269,8 @@ class MovieController extends Controller
                 abort(404, 'Video file not found');
             }
 
-            $path = Storage::disk('public')->path($movie->local_path);
-            $fileSize = filesize($path);
-            $file = fopen($path, 'rb');
-
-            // Handle range requests for seeking
-            $start = 0;
-            $end = $fileSize - 1;
-            $status = 200;
-
-            if (isset($_SERVER['HTTP_RANGE'])) {
-                preg_match('/bytes=(\d+)-(\d+)?/', $_SERVER['HTTP_RANGE'], $matches);
-                $start = intval($matches[1]);
-                $end = isset($matches[2]) ? intval($matches[2]) : $fileSize - 1;
-                $status = 206;
-            }
-
-            $length = $end - $start + 1;
-
-            // Set headers to prevent download and enforce streaming
-            header('Content-Type: video/mp4');
-            header('Accept-Ranges: bytes');
-            header("Content-Length: $length");
-            if ($status == 206) {
-                header("Content-Range: bytes $start-$end/$fileSize");
-            }
-            header('Cache-Control: no-store, must-revalidate, max-age=0');
-            header('Pragma: no-cache');
-            header('Expires: 0');
-            header('X-Content-Type-Options: nosniff');
-            header('Content-Security-Policy: default-src \'self\'');
-            header('X-Frame-Options: SAMEORIGIN');
-            header('Content-Disposition: inline');
-
-            http_response_code($status);
-            fseek($file, $start);
-
-            $buffer = 8192;
-            $currentPosition = $start;
-
-            while (!feof($file) && $currentPosition <= $end) {
-                if (connection_status() != CONNECTION_NORMAL) {
-                    fclose($file);
-                    exit;
-                }
-
-                $bufferSize = min($buffer, $end - $currentPosition + 1);
-                echo fread($file, $bufferSize);
-                $currentPosition += $bufferSize;
-                flush();
-                ob_flush();
-                usleep(1000);
-            }
-
-            fclose($file);
-            exit;
-
+            // Let Nginx handle the actual streaming
+            return response()->file(Storage::disk('public')->path($movie->local_path));
         } catch (\Exception $e) {
             Log::error('Video streaming error: ' . $e->getMessage());
             if ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpException) {
