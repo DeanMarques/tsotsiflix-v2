@@ -120,12 +120,12 @@ onMounted(() => {
                             aria-labelledby="userDropdown"
                         >
                             <li>
-                                <Link
+                                <!-- <Link
                                     :href="route('profile.edit')"
                                     class="dropdown-item"
                                 >
                                     Profile
-                                </Link>
+                                </Link> -->
                             </li>
                             <li v-if="$page.props.auth.user.is_admin">
                                 <Link
