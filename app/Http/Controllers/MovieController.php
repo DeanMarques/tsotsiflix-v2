@@ -118,9 +118,10 @@ class MovieController extends Controller
 
         foreach ($movieFiles as $file) {
             $filename = pathinfo($file, PATHINFO_FILENAME);
-            // Extract year if present (assuming format includes a year like "Movie Name 2023")
+            
+            // Extract year if present
             $year = null;
-            if (preg_match('/\b(\d{4})\b/', $filename, $matches)) {
+            if (preg_match('/\((\d{4})\)/', $filename, $matches)) {
                 $year = (int)$matches[1];
             }
             
@@ -141,35 +142,56 @@ class MovieController extends Controller
                 continue;
             }
 
-            Log::info('Searching TMDB for movie:', ['searchTitle' => $searchTitle, 'year' => $year]);
             $searchResult = $this->tmdbService->searchMovie($searchTitle, $year);
-            Log::info('TMDB search result:', ['result' => $searchResult]);
             
             if (!empty($searchResult['results'])) {
-                $movieData = $searchResult['results'][0];
-                $details = $this->tmdbService->getMovieDetails($movieData['id']);
-                
-                // Movie details already includes the trailer URL
-                $movie = Movie::create([
-                    'title' => $movieData['title'],
-                    'tmdb_id' => $movieData['id'],
-                    'overview' => $movieData['overview'],
-                    'poster_path' => $movieData['poster_path'],
-                    'backdrop_path' => $movieData['backdrop_path'],
-                    'release_date' => $movieData['release_date'],
-                    'vote_average' => $movieData['vote_average'],
-                    'local_path' => $file,
-                    'trailer_url' => $details['trailer_url'] ?? null,
-                    'director' => $details['director'] ?? null,
-                    'cast' => $details['cast'] ?? [],
-                    'runtime' => $details['runtime'] ?? null,
-                ]);
+                // Filter results to match year exactly
+                $movieResults = collect($searchResult['results'])->filter(function($result) use ($year) {
+                    if (!$year) return true;
+                    
+                    $releaseYear = date('Y', strtotime($result['release_date']));
+                    return (int)$releaseYear === $year;
+                })->values();
 
-                // Sync genres
-                if (!empty($movieData['genre_ids'])) {
-                    $genreIds = Genre::whereIn('tmdb_id', $movieData['genre_ids'])
-                        ->pluck('id');
-                    $movie->genres()->sync($genreIds);
+                if ($movieResults->isNotEmpty()) {
+                    $movieData = $movieResults->first();
+                    
+                    // Check for duplicate TMDB ID
+                    if (!Movie::where('tmdb_id', $movieData['id'])->exists()) {
+                        $details = $this->tmdbService->getMovieDetails($movieData['id']);
+                        
+                        $movie = Movie::create([
+                            'title' => $movieData['title'],
+                            'tmdb_id' => $movieData['id'],
+                            'overview' => $movieData['overview'],
+                            'poster_path' => $movieData['poster_path'],
+                            'backdrop_path' => $movieData['backdrop_path'],
+                            'release_date' => $movieData['release_date'],
+                            'vote_average' => $movieData['vote_average'],
+                            'local_path' => $file,
+                            'trailer_url' => $details['trailer_url'] ?? null,
+                            'director' => $details['director'] ?? null,
+                            'cast' => $details['cast'] ?? [],
+                            'runtime' => $details['runtime'] ?? null,
+                        ]);
+
+                        // Sync genres
+                        if (!empty($movieData['genre_ids'])) {
+                            $genreIds = Genre::whereIn('tmdb_id', $movieData['genre_ids'])
+                                ->pluck('id');
+                            $movie->genres()->sync($genreIds);
+                        }
+                    } else {
+                        Log::info('Movie with TMDB ID already exists', [
+                            'tmdb_id' => $movieData['id'],
+                            'title' => $movieData['title']
+                        ]);
+                    }
+                } else {
+                    Log::warning('No matching movie found for year', [
+                        'title' => $searchTitle,
+                        'year' => $year
+                    ]);
                 }
             }
         }
