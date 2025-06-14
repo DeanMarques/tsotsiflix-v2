@@ -5,7 +5,7 @@
         :genres="genres"
         @genre-selected="selectedGenre = String($event)">
         <!-- Hero Carousel Section -->
-        <div id="heroCarousel" class="carousel slide vh-80" data-bs-ride="carousel">
+        <div v-if="props.currentGenre === null" id="heroCarousel" class="carousel slide vh-80" data-bs-ride="carousel">
             <div class="carousel-inner h-100">
                 <div v-for="(movie, index) in carouselMovies" 
                      :key="movie.id"
@@ -38,18 +38,10 @@
         </div>
 
         <!-- Movies Grid -->
-        <div class="bg-dark bg-gradient min-vh-100 py-5 overflow-auto scrollbar-dark">
+        <div class="bg-dark min-vh-100 py-5 overflow-auto scrollbar-dark">
             <div class="container-fluid px-4">
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h2 class="h3 text-white">{{ sectionHeading }}</h2>
-                    <Link
-                        :href="route('movies.scan')"
-                        method="post"
-                        as="button"
-                        class="btn btn-outline-light">
-                        <i class="bi bi-plus-lg me-2"></i>
-                        Add Movies
-                    </Link>
+                    <h2 class="h3 text-white">{{ sectionHeading }}</h2>                   
                 </div>
 
                 <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-6 g-4">

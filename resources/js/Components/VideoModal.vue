@@ -108,9 +108,9 @@
 
                             <!-- Cast Section -->
                             <div v-if="movie.cast?.length" class="mt-4">
-                                <p class="lead mb-3">Cast</p>
-                                <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-6 g-4">                                    
-                                    <div v-for="actor in movie.cast.slice(0, 8)" :key="actor.id" class="col text-center">
+                                <p class="lead mb-3">Cast:</p>
+                                <div class="row row-cols-3 row-cols-sm-4 row-cols-md-6 row-cols-lg-8 g-2">                                    
+                                    <div v-for="actor in movie.cast.slice(0, 6)" :key="actor.id" class="col text-center">
                                         <img :src="actor.profile_path ? 'https://image.tmdb.org/t/p/w185' + actor.profile_path : 'https://via.placeholder.com/185x278'"
                                             :alt="actor.name"
                                             class="rounded-circle mb-2"
