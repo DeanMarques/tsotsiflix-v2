@@ -23,6 +23,7 @@ class MovieController extends Controller
         $page = request()->input('page', 1);
         $perPage = 6; // Load 6 movies at a time for smoother infinite scroll
         $currentGenre = request()->input('genre');
+        $search = request()->input('search');
 
         $query = Movie::query()->orderBy('release_date', 'desc');
         
@@ -31,6 +32,11 @@ class MovieController extends Controller
             $query->whereHas('genres', function($q) use ($currentGenre) {
                 $q->where('genres.id', $currentGenre);
             });
+        }
+
+        // Apply search if provided
+        if ($search) {
+            $query->where('title', 'like', '%' . $search . '%');
         }
 
         $movies = $query->paginate($perPage)
@@ -60,43 +66,44 @@ class MovieController extends Controller
                 ];
              });
 
-        $genres = Genre::orderBy('name')->get();
-
-        // Get carousel movies (most recent 5)
-        $carouselMovies = Movie::orderBy('created_at', 'desc')
-            ->take(5)
-            ->get()
-            ->map(function ($movie) {
-                return [
-                    'id' => $movie->id,
-                    'tmdb_id' => $movie->tmdb_id,
-                    'title' => $movie->title,
-                    'overview' => $movie->overview,
-                    'poster_path' => $movie->poster_path 
-                        ? "https://image.tmdb.org/t/p/w500" . $movie->poster_path 
-                        : null,
-                    'backdrop_path' => $movie->backdrop_path 
-                        ? "https://image.tmdb.org/t/p/original" . $movie->backdrop_path 
-                        : null,
-                    'release_date' => $movie->release_date,
-                    'vote_average' => $movie->vote_average,
-                    'local_path' => $movie->local_path,
-                    'trailer_url' => $movie->trailer_url,
-                    'director' => $movie->director,
-                    'cast' => $movie->cast,
-                    'runtime' => $movie->runtime,
-                    'genres' => $movie->genres->map(fn($genre) => [
-                        'id' => $genre->id,
-                        'name' => $genre->name
-                    ]),
-                ];
-            });
+        // Only get carousel movies if no search or genre filter
+        $carouselMovies = (!$search && !$currentGenre) 
+            ? Movie::orderBy('created_at', 'desc')
+                ->take(10)
+                ->get()
+                ->map(function ($movie) {
+                    return [
+                        'id' => $movie->id,
+                        'tmdb_id' => $movie->tmdb_id,
+                        'title' => $movie->title,
+                        'overview' => $movie->overview,
+                        'poster_path' => $movie->poster_path 
+                            ? "https://image.tmdb.org/t/p/w500" . $movie->poster_path 
+                            : null,
+                        'backdrop_path' => $movie->backdrop_path 
+                            ? "https://image.tmdb.org/t/p/original" . $movie->backdrop_path 
+                            : null,
+                        'release_date' => $movie->release_date,
+                        'vote_average' => $movie->vote_average,
+                        'local_path' => $movie->local_path,
+                        'trailer_url' => $movie->trailer_url,
+                        'director' => $movie->director,
+                        'cast' => $movie->cast,
+                        'runtime' => $movie->runtime,
+                        'genres' => $movie->genres->map(fn($genre) => [
+                            'id' => $genre->id,
+                            'name' => $genre->name
+                        ]),
+                    ];
+                })
+            : [];
 
         return Inertia::render('Movies/Dashboard', [
             'movies' => $movies,
-            'genres' => $genres,
+            'genres' => Genre::orderBy('name')->get(),
             'carouselMovies' => $carouselMovies,
-            'currentGenre' => $currentGenre
+            'currentGenre' => $currentGenre,
+            'search' => $search
         ]);
     }
 

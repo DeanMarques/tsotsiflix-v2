@@ -40,8 +40,26 @@
         <!-- Movies Grid -->
         <div class="bg-dark min-vh-100 py-5 overflow-auto scrollbar-dark">
             <div class="container-fluid px-4">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h2 class="h3 text-white">{{ sectionHeading }}</h2>                   
+                <div class="d-flex justify-content-center align-items-center mb-4">
+                    <h2 class="h3 text-white">{{ sectionHeading }}</h2>
+                    <div class="d-flex ms-2 align-items-center">
+                        <div class="input-group">
+                            <input 
+                                type="search" 
+                                class="form-control bg-dark text-white border-secondary" 
+                                placeholder="Search movies..." 
+                                v-model="searchQuery"
+                                @input="debounceSearch"
+                            >
+                            <button 
+                                class="btn btn-outline-secondary" 
+                                type="button"
+                                :disabled="loading"
+                            >
+                                <i class="bi bi-search"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-6 g-4">
@@ -83,7 +101,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import VideoModal from '@/Components/VideoModal.vue';
 import { Head, Link } from '@inertiajs/vue3';
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
 import { router } from '@inertiajs/vue3';
 import { useIntersectionObserver } from '@vueuse/core';
 
@@ -170,7 +188,8 @@ onMounted(() => {
             loading.value = true;
             
             const queryParams = {
-                page: props.movies.current_page + 1
+                page: props.movies.current_page + 1,
+                search: searchQuery.value
             };
             
             if (props.currentGenre) {
@@ -208,6 +227,34 @@ const openMovieModal = (movie) => {
     };
     showTrailerModal.value = true;
 };
+
+// Search functionality
+const searchQuery = ref('');
+let searchTimeout;
+
+const debounceSearch = () => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        allMovies.value = [];
+        router.get(route('dashboard'), {
+            search: searchQuery.value,
+            genre: selectedGenre.value === 'all' ? null : selectedGenre.value,
+            page: 1
+        }, {
+            preserveState: false,
+            preserveScroll: true,
+            replace: true,
+            onSuccess: () => {
+                loading.value = true;
+            }
+        });
+    }, 500);
+};
+
+// Add search to the watch cleanup
+onUnmounted(() => {
+    clearTimeout(searchTimeout);
+});
 </script>
 
 
