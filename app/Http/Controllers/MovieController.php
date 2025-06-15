@@ -228,14 +228,13 @@ class MovieController extends Controller
                     $destinationFile = $destinationDir . $newFilename;
 
                     if (copy($sourceFile, $destinationFile)) {
-                        $command = 'rm -rf ' . escapeshellarg($movieDir);
+                        // Use sudo to overcome permission issues
+                        $command = 'sudo rm -rf ' . escapeshellarg($movieDir);
                         Log::info("Executing command: " . $command);
                         
-                        // Initialize variables before exec call
                         $output = [];
                         $returnValue = null;
                         
-                        // Pass variables by reference to exec
                         exec($command . ' 2>&1', $output, $returnValue);
                         
                         if ($returnValue !== 0) {
@@ -244,6 +243,19 @@ class MovieController extends Controller
                                 'return_value' => $returnValue,
                                 'output' => $output
                             ]);
+                            
+                            // If sudo fails, try changing ownership first
+                            $chownCommand = 'sudo chown -R forge:forge ' . escapeshellarg($movieDir);
+                            exec($chownCommand);
+                            
+                            // Try deletion again without sudo after ownership change
+                            exec('rm -rf ' . escapeshellarg($movieDir) . ' 2>&1', $output, $returnValue);
+                            
+                            if ($returnValue !== 0) {
+                                Log::error("Delete command failed after ownership change", [
+                                    'output' => $output
+                                ]);
+                            }
                         } else {
                             Log::info("Successfully processed: {$folderName}");
                         }
