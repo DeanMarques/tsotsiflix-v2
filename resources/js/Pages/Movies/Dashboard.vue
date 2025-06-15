@@ -18,7 +18,7 @@
                     <div class="carousel-caption">
                         <div class="position-relative text-start col-12 col-md-6">
                             <h1 class="display-4 fw-bold mb-3">{{ movie.title }}</h1>
-                            <p class="lead mb-4">{{ movie.overview }}</p>
+                            <!-- <p class="lead mb-4">{{ movie.overview }}</p> -->
                             <button class="btn btn-dark btn-lg"
                                     @click="openMovieModal(movie)">
                                 <i class="bi bi-info-circle me-2"></i> More Info
