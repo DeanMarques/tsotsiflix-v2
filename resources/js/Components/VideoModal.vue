@@ -194,6 +194,7 @@ const playMovie = async () => {
             
             // Use the full URL from the response
             videoUrl.value = data.url;
+            console.log('Movie URL:', videoUrl.value);
             playMode.value = 'movie';
             showVideo.value = true;
             hasError.value = false;
