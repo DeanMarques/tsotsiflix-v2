@@ -268,7 +268,7 @@ class MovieController extends Controller
 
                     if (copy($sourceFile, $destinationFile)) {
                         // Use sudo to overcome permission issues
-                        $command = 'sudo rm -rf ' . escapeshellarg($movieDir);
+                        $command = 'rm -rf ' . escapeshellarg($movieDir);
                         Log::info("Executing command: " . $command);
                         
                         $output = [];
@@ -284,7 +284,7 @@ class MovieController extends Controller
                             ]);
                             
                             // If sudo fails, try changing ownership first
-                            $chownCommand = 'sudo chown -R forge:forge ' . escapeshellarg($movieDir);
+                            $chownCommand = 'chown -R forge:forge ' . escapeshellarg($movieDir);
                             exec($chownCommand);
                             
                             // Try deletion again without sudo after ownership change
