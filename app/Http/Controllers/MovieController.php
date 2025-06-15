@@ -132,17 +132,18 @@ class MovieController extends Controller
                 $year = (int)$matches[1];
             }
             
-            // Improved title cleaning
+            // Clean up filename for better search results
             $searchTitle = preg_replace('/[\._\-\(\)]/', ' ', $filename);
             $searchTitle = preg_replace('/\s*\d{4}\s*/', ' ', $searchTitle);
             $searchTitle = trim(preg_replace('/\s+/', ' ', $searchTitle));
             
             Log::info('Processing movie:', [
-                'original_filename' => $filename, 
-                'cleaned_title' => $searchTitle,
+                'filename' => $filename, 
+                'searchTitle' => $searchTitle,
                 'year' => $year
             ]);
             
+            // Skip if movie already exists
             if (Movie::where('local_path', $file)->exists()) {
                 Log::info('Movie already exists, skipping', ['file' => $file]);
                 continue;
@@ -151,57 +152,17 @@ class MovieController extends Controller
             $searchResult = $this->tmdbService->searchMovie($searchTitle, $year);
             
             if (!empty($searchResult['results'])) {
-                // Enhanced filtering logic
-                $movieResults = collect($searchResult['results'])
-                    ->filter(function($result) use ($year, $searchTitle) {
-                        // Must match year exactly if provided
-                        if ($year) {
-                            $releaseYear = date('Y', strtotime($result['release_date']));
-                            if ((int)$releaseYear !== $year) {
-                                return false;
-                            }
-                        }
-                        
-                        // Compare titles more strictly
-                        $resultTitle = strtolower(trim($result['title']));
-                        $searchTitle = strtolower(trim($searchTitle));
-                        
-                        // Exact match gets highest priority
-                        if ($resultTitle === $searchTitle) {
-                            return true;
-                        }
-                        
-                        // Check if search title is contained within result title
-                        if (strpos($resultTitle, $searchTitle) !== false) {
-                            return true;
-                        }
-                        
-                        // Calculate similarity percentage
-                        similar_text($resultTitle, $searchTitle, $percent);
-                        return $percent > 80; // Require 80% similarity
-                    })
-                    ->sortBy(function($result) use ($searchTitle) {
-                        // Sort by title similarity
-                        similar_text(
-                            strtolower($result['title']), 
-                            strtolower($searchTitle), 
-                            $percent
-                        );
-                        return -$percent; // Negative to sort highest first
-                    })
-                    ->values();
+                // Filter results to match year exactly
+                $movieResults = collect($searchResult['results'])->filter(function($result) use ($year) {
+                    if (!$year) return true;
+                    
+                    $releaseYear = date('Y', strtotime($result['release_date']));
+                    return (int)$releaseYear === $year;
+                })->values();
 
                 if ($movieResults->isNotEmpty()) {
                     $movieData = $movieResults->first();
                     
-                    // Log match details for verification
-                    Log::info('Movie match found', [
-                        'search_title' => $searchTitle,
-                        'matched_title' => $movieData['title'],
-                        'year' => $year,
-                        'release_date' => $movieData['release_date']
-                    ]);
-
                     // Check for duplicate TMDB ID
                     if (!Movie::where('tmdb_id', $movieData['id'])->exists()) {
                         $details = $this->tmdbService->getMovieDetails($movieData['id']);
@@ -267,13 +228,14 @@ class MovieController extends Controller
                     $destinationFile = $destinationDir . $newFilename;
 
                     if (copy($sourceFile, $destinationFile)) {
-                        // Use sudo to overcome permission issues
                         $command = 'rm -rf ' . escapeshellarg($movieDir);
                         Log::info("Executing command: " . $command);
                         
+                        // Initialize variables before exec call
                         $output = [];
                         $returnValue = null;
                         
+                        // Pass variables by reference to exec
                         exec($command . ' 2>&1', $output, $returnValue);
                         
                         if ($returnValue !== 0) {
@@ -282,19 +244,6 @@ class MovieController extends Controller
                                 'return_value' => $returnValue,
                                 'output' => $output
                             ]);
-                            
-                            // If sudo fails, try changing ownership first
-                            $chownCommand = 'chown -R forge:forge ' . escapeshellarg($movieDir);
-                            exec($chownCommand);
-                            
-                            // Try deletion again without sudo after ownership change
-                            exec('rm -rf ' . escapeshellarg($movieDir) . ' 2>&1', $output, $returnValue);
-                            
-                            if ($returnValue !== 0) {
-                                Log::error("Delete command failed after ownership change", [
-                                    'output' => $output
-                                ]);
-                            }
                         } else {
                             Log::info("Successfully processed: {$folderName}");
                         }
