@@ -227,8 +227,8 @@ class MovieController extends Controller
                     // Copy the file first
                     if (copy($sourceFile, $destinationFile)) {
                         // Use shell_exec to remove the entire directory and its contents
-                        shell_exec("rm -rf " . escapeshellarg($movieDir));
-                        Log::info("rm -rf command executed for: {$movieDir}");
+                        $command = sprintf('rm -rf %s', escapeshellarg($movieDir));
+                        Log::info("Executing command: " . $command);
                         Log::info("Successfully processed: {$folderName}");
                     } else {
                         Log::error("Failed to copy file: {$folderName}");
