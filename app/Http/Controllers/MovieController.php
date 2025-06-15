@@ -226,8 +226,18 @@ class MovieController extends Controller
 
                     // Copy the file first
                     if (copy($sourceFile, $destinationFile)) {
+
+                         // Check current user and permissions
+                        $currentUser = exec('whoami');
+                        $userGroups = exec('groups');
+                        
+                        Log::info('Current execution context:', [
+                            'user' => $currentUser,
+                            'groups' => $userGroups
+                        ]);
                         // Use exec instead of shell_exec to get both output and return value
                         $command = sprintf('rm -rf %s', escapeshellarg($movieDir));
+
                         Log::info("Executing command: " . $command);
                         
                         exec($command, $output, $returnValue);
