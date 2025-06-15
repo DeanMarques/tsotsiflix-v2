@@ -209,10 +209,13 @@ class MovieController extends Controller
     
     public function moveMovies()
     {
-        $sourceDir = '/home/forge/downloads/complete/';
-        $destinationDir = '/mnt/usb/tsotsiflix/mediafiles/movies/';
-
         try {
+            $currentUser = exec('whoami');
+            Log::info('Current user:', ['user' => $currentUser]);
+
+            $sourceDir = '/home/forge/downloads/complete/';
+            $destinationDir = '/mnt/usb/tsotsiflix/mediafiles/movies/';
+
             $movieDirs = array_filter(glob($sourceDir . '*'), 'is_dir');
 
             foreach ($movieDirs as $movieDir) {
@@ -224,38 +227,27 @@ class MovieController extends Controller
                     $newFilename = $folderName . '.mp4';
                     $destinationFile = $destinationDir . $newFilename;
 
-                    // Copy the file first
                     if (copy($sourceFile, $destinationFile)) {
-
-                         // Check current user and permissions
-                        $currentUser = exec('whoami');
-                        $userGroups = exec('groups');
-                        
-                        Log::info('Current execution context:', [
-                            'user' => $currentUser,
-                            'groups' => $userGroups
-                        ]);
-                        // Use exec instead of shell_exec to get both output and return value
-                        $command = sprintf('rm -rf %s', escapeshellarg($movieDir));
-
+                        $command = 'rm -rf ' . escapeshellarg($movieDir);
                         Log::info("Executing command: " . $command);
                         
-                        exec($command, $output, $returnValue);
+                        // Initialize variables before exec call
+                        $output = [];
+                        $returnValue = null;
+                        
+                        // Pass variables by reference to exec
+                        exec($command . ' 2>&1', $output, $returnValue);
                         
                         if ($returnValue !== 0) {
-                            Log::error("Failed to delete directory", [
-                                'directory' => $movieDir,
+                            Log::error("Delete command failed", [
+                                'command' => $command,
                                 'return_value' => $returnValue,
                                 'output' => $output
                             ]);
                         } else {
-                            Log::info("Successfully processed and deleted: {$folderName}");
+                            Log::info("Successfully processed: {$folderName}");
                         }
-                    } else {
-                        Log::error("Failed to copy file: {$folderName}");
                     }
-                } else {
-                    Log::warning("No MP4 file found in directory: {$folderName}");
                 }
             }
 
