@@ -226,10 +226,21 @@ class MovieController extends Controller
 
                     // Copy the file first
                     if (copy($sourceFile, $destinationFile)) {
-                        // Use shell_exec to remove the entire directory and its contents
+                        // Use exec instead of shell_exec to get both output and return value
                         $command = sprintf('rm -rf %s', escapeshellarg($movieDir));
                         Log::info("Executing command: " . $command);
-                        Log::info("Successfully processed: {$folderName}");
+                        
+                        exec($command, $output, $returnValue);
+                        
+                        if ($returnValue !== 0) {
+                            Log::error("Failed to delete directory", [
+                                'directory' => $movieDir,
+                                'return_value' => $returnValue,
+                                'output' => $output
+                            ]);
+                        } else {
+                            Log::info("Successfully processed and deleted: {$folderName}");
+                        }
                     } else {
                         Log::error("Failed to copy file: {$folderName}");
                     }
