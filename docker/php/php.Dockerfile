@@ -20,13 +20,11 @@ RUN apt-get update && apt-get install -y \
     automake \
     libtool
 
-# Add PHP repository
+# Add Nginx repository
 RUN add-apt-repository -y ppa:ondrej/php
-#RUN add-apt-repository ppa:ondrej/nginx
-RUN apt-get update
 
-RUN apt-get install nginx -y
-RUN apt-get install cron -y
+# RUN apt-get install nginx nginx-extras -y
+# RUN apt-get install cron -y
 
 ## Install common packages first
 RUN rm -rf /var/lib/apt/lists/* \

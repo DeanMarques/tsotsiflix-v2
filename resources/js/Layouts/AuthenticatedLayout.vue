@@ -92,9 +92,9 @@ onMounted(() => {
                                 </li>
                             </ul>
                         </li>
-                        <li class="nav-item">
+                        <!-- <li class="nav-item">
                             <a href="#" class="nav-link text-white">My List</a>
-                        </li>
+                        </li> -->
                     </ul>
 
                     <!-- User Dropdown -->
@@ -159,7 +159,7 @@ onMounted(() => {
         </header>
 
         <!-- Page Content -->
-        <main class="">
+        <main class="content-wrapper">
             <div class="">
                 <slot />
             </div>
@@ -205,4 +205,8 @@ onMounted(() => {
 .nav-link:hover {
     color: rgba(255, 255, 255, 0.7) !important;
 }
+
+/* .content-wrapper {    
+    padding-top: 70px; 
+} */
 </style>

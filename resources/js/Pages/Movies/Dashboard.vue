@@ -1,11 +1,12 @@
 <template>
     <Head title="Dashboard" />
+    
 
     <AuthenticatedLayout 
         :genres="genres"
         @genre-selected="selectedGenre = String($event)">
         <!-- Hero Carousel Section -->
-        <div v-if="props.currentGenre === null" id="heroCarousel" class="carousel slide vh-80" data-bs-ride="carousel">
+        <div v-if="props.currentGenre === null && !searchQuery" id="heroCarousel" class="carousel slide vh-80" data-bs-ride="carousel">
             <div class="carousel-inner h-100">
                 <div v-for="(movie, index) in carouselMovies" 
                      :key="movie.id"
@@ -39,7 +40,7 @@
 
         <!-- Movies Grid -->
         <div class="bg-dark min-vh-100 py-5 overflow-auto scrollbar-dark">
-            <div class="container-fluid px-4">
+            <div class="container-fluid mt-4">
                 <div class="d-flex justify-content-center align-items-center mb-4">
                     <h2 class="h3 text-white">{{ sectionHeading }}</h2>
                     <div class="d-flex ms-2 align-items-center">
@@ -60,6 +61,7 @@
                             </button>
                         </div>
                     </div>
+                    
                 </div>
 
                 <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-6 g-4">
@@ -176,13 +178,7 @@ watch(selectedGenre, (newValue) => {
 });
 
 // Setup intersection observer for infinite scroll
-onMounted(() => {
-    // Auto advance carousel
-    // setInterval(() => {
-    //     activeSlide.value = (activeSlide.value + 1) % props.carouselMovies.length;
-    // }, 8000);
-
-    // Setup infinite scroll
+onMounted(() => {   
     useIntersectionObserver(observerTarget, ([{ isIntersecting }]) => {
         if (isIntersecting && !loading.value && props.movies.current_page < props.movies.last_page) {
             loading.value = true;
@@ -234,26 +230,75 @@ let searchTimeout;
 
 const debounceSearch = () => {
     clearTimeout(searchTimeout);
+    loading.value = true;
     searchTimeout = setTimeout(() => {
+        // Reset movies array and pagination
         allMovies.value = [];
+        
         router.get(route('dashboard'), {
             search: searchQuery.value,
             genre: selectedGenre.value === 'all' ? null : selectedGenre.value,
-            page: 1
+            page: 1 // Always reset to page 1 when searching
         }, {
-            preserveState: false,
-            preserveScroll: true,
+            preserveState: true,
+            preserveScroll: false, // Changed to false to scroll to top on new search
             replace: true,
             onSuccess: () => {
-                loading.value = true;
+                loading.value = false;
+            },
+            onError: () => {
+                loading.value = false;
             }
         });
     }, 500);
 };
 
-// Add search to the watch cleanup
-onUnmounted(() => {
-    clearTimeout(searchTimeout);
+// Update the intersection observer logic to handle search
+const setupInfiniteScroll = () => {
+    useIntersectionObserver(observerTarget, ([{ isIntersecting }]) => {
+        if (isIntersecting && 
+            !loading.value && 
+            props.movies.current_page < props.movies.last_page) {
+            
+            loading.value = true;
+            
+            router.get(route('dashboard'), {
+                page: props.movies.current_page + 1,
+                search: searchQuery.value, // Include current search term
+                genre: selectedGenre.value === 'all' ? null : selectedGenre.value
+            }, {
+                preserveState: true,
+                preserveScroll: true,
+                onSuccess: () => {
+                    loading.value = false;
+                },
+                onError: () => {
+                    loading.value = false;
+                }
+            });
+        }
+    });
+};
+
+// Update onMounted to use the new setup
+onMounted(() => {
+    setupInfiniteScroll();
+});
+
+// Add a watch for searchQuery to reset pagination when search changes
+watch(searchQuery, () => {
+    if (searchQuery.value === '') {
+        // Reset everything when search is cleared
+        allMovies.value = [];
+        router.get(route('dashboard'), {
+            genre: selectedGenre.value === 'all' ? null : selectedGenre.value,
+            page: 1
+        }, {
+            preserveState: false,
+            preserveScroll: true,
+            replace: true
+        });
+    }
 });
 </script>
 

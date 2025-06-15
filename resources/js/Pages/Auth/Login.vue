@@ -18,6 +18,8 @@ const submit = () => {
         <!-- Logo -->
         <div class="text-center">
             <Link href="/">
+                
+                <span class="fs-6">Hello and welcome:Getting the start blocks in place to introduce more features in time :)</span><br>
                 <TsotsiflixLogo TsotsiflixLogo className="text-decoration-none fs-1" /> 
             </Link>
         </div>
