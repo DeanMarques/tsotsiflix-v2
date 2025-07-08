@@ -165,8 +165,9 @@ const displayedMovies = computed(() => {
 
 // Reset pagination when filters change
 watch([selectedGenre, searchQuery], () => {
-    currentPage.value = 0;
+    currentPage.value = 1;
     loading.value = false;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 });
 
 // Infinite scroll handler
