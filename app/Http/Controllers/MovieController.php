@@ -4,12 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Models\Movie;
 use App\Models\Genre;
+use App\Models\Watchlist;
+use App\Models\Watched;
 use App\Services\TmdbService;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Auth;
 
 
 class MovieController extends Controller
@@ -18,29 +21,18 @@ class MovieController extends Controller
         private TmdbService $tmdbService
     ) {}
 
+    
     public function dashboard()
     {
-        $page = request()->input('page', 1);
-        $perPage = 6; // Load 6 movies at a time for smoother infinite scroll
-        $currentGenre = request()->input('genre');
-        $search = request()->input('search');
+       $query = Movie::with('genres')
+        ->whereDoesntHave('watched', function($query) {
+            $query->where('user_id', Auth::id());
+        })
+        ->orderBy('release_date', 'desc');
 
-        $query = Movie::query()->orderBy('release_date', 'desc');
-        
-        // Apply genre filter if selected
-        if ($currentGenre) {
-            $query->whereHas('genres', function($q) use ($currentGenre) {
-                $q->where('genres.id', $currentGenre);
-            });
-        }
-
-        // Apply search if provided
-        if ($search) {
-            $query->where('title', 'like', '%' . $search . '%');
-        }
-
-        $movies = $query->paginate($perPage)
-            ->through(function ($movie) {
+        // Get all movies at once since we'll handle pagination client-side
+        $movies = $query->get()
+            ->map(function ($movie) {
                 return [
                     'id' => $movie->id,
                     'tmdb_id' => $movie->tmdb_id,
@@ -64,47 +56,166 @@ class MovieController extends Controller
                         'name' => $genre->name
                     ]),
                 ];
-             });
+            });
 
-        // Only get carousel movies if no search or genre filter
-        $carouselMovies = (!$search && !$currentGenre) 
-            ? Movie::orderBy('release_date', 'desc')
-                ->take(10)
-                ->get()
-                ->map(function ($movie) {
-                    return [
-                        'id' => $movie->id,
-                        'tmdb_id' => $movie->tmdb_id,
-                        'title' => $movie->title,
-                        'overview' => $movie->overview,
-                        'poster_path' => $movie->poster_path 
-                            ? "https://image.tmdb.org/t/p/w500" . $movie->poster_path 
-                            : null,
-                        'backdrop_path' => $movie->backdrop_path 
-                            ? "https://image.tmdb.org/t/p/original" . $movie->backdrop_path 
-                            : null,
-                        'release_date' => $movie->release_date,
-                        'vote_average' => $movie->vote_average,
-                        'local_path' => $movie->local_path,
-                        'trailer_url' => $movie->trailer_url,
-                        'director' => $movie->director,
-                        'cast' => $movie->cast,
-                        'runtime' => $movie->runtime,
-                        'genres' => $movie->genres->map(fn($genre) => [
-                            'id' => $genre->id,
-                            'name' => $genre->name
-                        ]),
-                    ];
-                })
-            : [];
+        // Get featured movies for carousel
+        $carouselMovies = $movies->take(10);
 
         return Inertia::render('Movies/Dashboard', [
             'movies' => $movies,
             'genres' => Genre::orderBy('name')->get(),
-            'carouselMovies' => $carouselMovies,
-            'currentGenre' => $currentGenre,
-            'search' => $search
+            'carouselMovies' => $carouselMovies
         ]);
+    }
+
+    public function watchlist()
+    {
+        $watchlist = Movie::whereHas('watchlists', function($query) {
+                $query->where('user_id', Auth::id());
+            })
+            ->with('genres')
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($movie) {
+                return [
+                    'id' => $movie->id,
+                    'tmdb_id' => $movie->tmdb_id,
+                    'title' => $movie->title,
+                    'overview' => $movie->overview,
+                    'poster_path' => $movie->poster_path 
+                        ? "https://image.tmdb.org/t/p/w500" . $movie->poster_path 
+                        : null,
+                    'backdrop_path' => $movie->backdrop_path 
+                        ? "https://image.tmdb.org/t/p/original" . $movie->backdrop_path 
+                        : null,
+                    'release_date' => $movie->release_date,
+                    'vote_average' => $movie->vote_average,
+                    'local_path' => $movie->local_path,
+                    'trailer_url' => $movie->trailer_url,
+                    'director' => $movie->director,
+                    'cast' => $movie->cast,
+                    'runtime' => $movie->runtime,
+                    'genres' => $movie->genres->map(fn($genre) => [
+                        'id' => $genre->id,
+                        'name' => $genre->name
+                    ]),
+                ];
+            });
+
+        return Inertia::render('Movies/Watchlist', [
+            'watchlist' => $watchlist,
+            'genres' => Genre::orderBy('name')->get()
+        ]);
+    }
+    
+    public function check($movieId)
+    {
+        $inWatchlist = Watchlist::where('user_id', Auth::id())
+            ->where('movie_id', $movieId)
+            ->exists();
+
+        return response()->json(['inWatchlist' => $inWatchlist]);
+    }
+
+    public function toggleWatchlist($movieId)
+    {
+        try {
+            $watchlist = Watchlist::where('user_id', Auth::id())
+                ->where('movie_id', $movieId)
+                ->first();
+
+            if ($watchlist) {
+                $watchlist->delete();
+                return redirect()->back()
+                    ->with('flash', ['type' => 'success', 'message' => 'Movie removed from watchlist']);
+            }
+
+            Watchlist::create([
+                'user_id' => Auth::id(),
+                'movie_id' => $movieId
+            ]);
+
+            return redirect()->back()
+                ->with('flash', ['type' => 'success', 'message' => 'Movie added to watchlist']);
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('flash', ['type' => 'error', 'message' => 'Failed to update watchlist']);
+        }
+    }
+
+    public function watched()
+    {
+        $watched = Movie::whereHas('watched', function($query) {
+                $query->where('user_id', Auth::id());
+            })
+            ->with('genres')
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($movie) {
+                return [
+                    'id' => $movie->id,
+                    'tmdb_id' => $movie->tmdb_id,
+                    'title' => $movie->title,
+                    'overview' => $movie->overview,
+                    'poster_path' => $movie->poster_path 
+                        ? "https://image.tmdb.org/t/p/w500" . $movie->poster_path 
+                        : null,
+                    'backdrop_path' => $movie->backdrop_path 
+                        ? "https://image.tmdb.org/t/p/original" . $movie->backdrop_path 
+                        : null,
+                    'release_date' => $movie->release_date,
+                    'vote_average' => $movie->vote_average,
+                    'local_path' => $movie->local_path,
+                    'trailer_url' => $movie->trailer_url,
+                    'director' => $movie->director,
+                    'cast' => $movie->cast,
+                    'runtime' => $movie->runtime,
+                    'genres' => $movie->genres->map(fn($genre) => [
+                        'id' => $genre->id,
+                        'name' => $genre->name
+                    ]),
+                ];
+            });
+
+        return Inertia::render('Movies/Watched', [
+            'watched' => $watched,
+            'genres' => Genre::orderBy('name')->get()
+        ]);
+    }
+
+    public function checkWatched($movieId)
+    {
+        $isWatched = Watched::where('user_id', Auth::id())
+            ->where('movie_id', $movieId)
+            ->exists();
+
+        return response()->json(['isWatched' => $isWatched]);
+    }
+
+    public function toggleWatched($movieId)
+    {
+        try {
+            $watched = Watched::where('user_id', Auth::id())
+                ->where('movie_id', $movieId)
+                ->first();
+
+            if ($watched) {
+                $watched->delete();
+                return redirect()->back()
+                    ->with('flash', ['type' => 'success', 'message' => 'Movie removed from watched list']);
+            }
+
+            Watched::create([
+                'user_id' => Auth::id(),
+                'movie_id' => $movieId
+            ]);
+
+            return redirect()->back()
+                ->with('flash', ['type' => 'success', 'message' => 'Movie marked as watched']);
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('flash', ['type' => 'error', 'message' => 'Failed to update watched status']);
+        }
     }
 
     

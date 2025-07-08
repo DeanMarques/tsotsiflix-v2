@@ -91,6 +91,18 @@
                                         :disabled="!movie?.trailer_url">
                                         <i class="bi bi-film me-2"></i> Trailer
                                     </button>
+                                    <button class="btn"
+                                            :class="[isInWatchlist ? 'btn-danger' : 'btn-dark']"
+                                            @click="toggleWatchlist">
+                                        <i class="bi" :class="[isInWatchlist ? 'bi-check2' : 'bi-plus-lg']"></i>
+                                        {{ isInWatchlist ? 'In Watchlist' : 'Add to Watchlist' }}
+                                    </button>
+                                   <button class="btn" 
+                                            :class="[isWatched ? 'btn-success' : 'btn-outline-light']"
+                                            @click="toggleWatched">
+                                        <i class="bi me-2" :class="[isWatched ? 'bi-check2-circle' : 'bi-eye']"></i>
+                                        {{ isWatched ? 'Watched' : 'Mark as Watched' }}
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -131,7 +143,8 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, } from 'vue';
+import { router } from '@inertiajs/vue3';
 
 const props = defineProps({
     show: Boolean,
@@ -217,6 +230,66 @@ const showInfo = () => {
         emit('close');
     }
 };
+
+const isInWatchlist = ref(false);
+
+// Add this method to handle watchlist toggle
+const toggleWatchlist = () => {
+    router.post(route('watchlist.toggle', props.movie.id), {}, {
+        preserveScroll: true,
+        onSuccess: () => {
+            // Toggle local state immediately for better UX
+            isInWatchlist.value = !isInWatchlist.value;
+        }
+    });
+};
+
+// Check watchlist status when movie changes
+watch(() => props.movie, async (newMovie) => {
+    if (newMovie?.id) {
+        try {
+            const response = await fetch(`/watchlist/check/${newMovie.id}`);
+            const data = await response.json();
+            isInWatchlist.value = data.inWatchlist;
+        } catch (error) {
+            console.error('Error checking watchlist status:', error);
+        }
+    }
+}, { immediate: true });
+
+//Add new ref for watched state
+const isWatched = ref(false);
+
+// Add method to handle watched toggle
+const toggleWatched = () => {
+    router.post(route('watched.toggle', props.movie.id), {}, {
+        preserveScroll: true,
+        onSuccess: () => {
+            // Toggle local state immediately for better UX
+            isWatched.value = !isWatched.value;
+        }
+    });
+};
+
+// Update the existing watch hook to check both watchlist and watched status
+watch(() => props.movie, async (newMovie) => {
+    if (newMovie?.id) {
+        try {
+            // Check watchlist status
+            const watchlistResponse = await fetch(`/watchlist/check/${newMovie.id}`);
+            const watchlistData = await watchlistResponse.json();
+            isInWatchlist.value = watchlistData.inWatchlist;
+
+            // Check watched status
+            const watchedResponse = await fetch(`/watched/check/${newMovie.id}`);
+            const watchedData = await watchedResponse.json();
+            isWatched.value = watchedData.isWatched;
+        } catch (error) {
+            console.error('Error checking movie status:', error);
+        }
+    }
+}, { immediate: true });
+
 </script>
 
 <style scoped>
@@ -233,28 +306,34 @@ const showInfo = () => {
     transform: scale(1.05);
 }
 
-/* Custom scrollbar styling */
-/* .scrollbar-dark {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255,255,255,0.2) rgba(0,0,0,0.2);
-}
 
-.scrollbar-dark::-webkit-scrollbar {
-    width: 8px;
-}
-
-.scrollbar-dark::-webkit-scrollbar-track {
-    background: rgba(0,0,0,0.2);
-}
-
-.scrollbar-dark::-webkit-scrollbar-thumb {
-    background-color: rgba(255,255,255,0.2);
-    border-radius: 4px;
-} */
 
 @media (max-width: 768px) {
     .btn-lg {
         width: 100%;
     }
+}
+
+/* Button styling */
+.btn-success {
+    background-color: #198754 !important; /* Brighter green */
+    color: white !important;
+    box-shadow: 0 0 10px rgba(25, 135, 84, 0.5); /* Subtle glow effect */
+}
+
+.btn-outline-light {
+    border: 2px solid rgba(255, 255, 255, 0.75);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.btn-outline-light:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: white;
+    color: white;
+}
+
+/* Add transition for smooth state changes */
+.btn {
+    transition: all 0.3s ease;
 }
 </style>

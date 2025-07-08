@@ -1,55 +1,17 @@
 <template>
-    <Head title="Dashboard" />
+    <Head title="My Watched Movies" />
 
-    <AuthenticatedLayout 
-        :genres="genres"
-        @genre-selected="selectedGenre = String($event)">
-        <!-- Hero Carousel Section -->
-        <div v-if="!selectedGenre && !searchQuery && carouselMovies.length !== 0" 
-             id="heroCarousel" 
-             class="carousel slide vh-80" 
-             data-bs-ride="carousel">
-            <div class="carousel-inner h-100">
-                <div v-for="(movie, index) in carouselMovies" 
-                     :key="movie.id"
-                     class="carousel-item h-100"
-                     :class="{ 'active': index === 0 }">
-                    <img :src="movie.backdrop_path" 
-                         :alt="movie.title"
-                         class="w-100 h-100 hero-image-bg">
-                    <div class="carousel-caption">
-                        <div class="position-relative text-start col-12 col-md-6">
-                            <h1 class="display-4 fw-bold mb-3">{{ movie.title }}</h1>
-                            <button class="btn btn-dark btn-lg"
-                                    @click="openMovieModal(movie)">
-                                <i class="bi bi-info-circle me-2"></i> More Info
-                            </button>
-                        </div>
-                    </div>
-                    
-                </div>
-            </div>
-            <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev">
-                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                <span class="visually-hidden">Previous</span>
-            </button>
-            <button class="carousel-control-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next">
-                <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                <span class="visually-hidden">Next</span>
-            </button>
-        </div>
-
-        <!-- Movies Grid -->
+    <AuthenticatedLayout :genres="genres">
         <div class="bg-dark min-vh-100 py-5 overflow-auto scrollbar-dark">
             <div class="container-fluid mt-4">
                 <div class="d-flex justify-content-center align-items-center mb-4">
-                    <h2 class="h3 text-white">{{ sectionHeading }}</h2>
+                    <h2 class="h3 text-white">My Watched Movies</h2>
                     <div class="d-flex ms-2 align-items-center">
                         <div class="input-group">
                             <input 
                                 type="search" 
                                 class="form-control bg-dark text-white border-secondary" 
-                                placeholder="Search movies..." 
+                                placeholder="Search watched movies..." 
                                 v-model="searchQuery"
                             >
                             <button 
@@ -63,7 +25,15 @@
                     </div>
                 </div>
 
-                <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-6 g-4">
+                <div v-if="displayedMovies.length === 0" class="text-center text-white mt-4">
+                    <h3>No watched movies</h3>
+                    <p class="lead">Start marking movies as watched to see them here.</p>
+                    <Link :href="route('dashboard')" class="btn btn-outline-light mt-3">
+                        Browse Movies
+                    </Link>
+                </div>
+
+                <div v-else class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-6 g-4">
                     <div v-for="movie in displayedMovies" :key="movie.id" class="col">
                         <div class="card bg-dark text-white h-100 movie-card"
                             @click="openMovieModal(movie)">
@@ -85,10 +55,6 @@
                     </div>
                 </div>
 
-                <div v-if="filteredMovies.length === 0" class="text-center text-light mt-4">
-                    <h3>No movies found</h3>
-                </div>
-
                 <div ref="observerTarget" class="py-4"></div>
             </div>
         </div>
@@ -105,19 +71,15 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import VideoModal from '@/Components/VideoModal.vue';
 import { Head, Link } from '@inertiajs/vue3';
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useIntersectionObserver } from '@vueuse/core';
 
 const props = defineProps({
-    movies: {
+    watched: {
         type: Array,
-        default: () => []
+        required: true
     },
     genres: {
-        type: Array,
-        default: () => []
-    },
-    carouselMovies: {
         type: Array,
         default: () => []
     }
@@ -126,34 +88,21 @@ const props = defineProps({
 // State Management
 const showTrailerModal = ref(false);
 const selectedMovie = ref(null);
-const selectedGenre = ref(null);
 const searchQuery = ref('');
 const loading = ref(false);
 const observerTarget = ref(null);
-const itemsPerPage = 24;
+const itemsPerPage = 24; // Changed to match Dashboard
 const currentPage = ref(1);
 
-// Filter movies based on genre and search
+// Filter movies based on search
 const filteredMovies = computed(() => {
-    let filtered = [...props.movies];
+    if (!searchQuery.value) return props.watched;
     
-    if (selectedGenre.value) {
-        filtered = filtered.filter(movie => 
-            movie.genres.some(genre => 
-                genre.id.toString() === selectedGenre.value
-            )
-        );
-    }
-    
-    if (searchQuery.value) {
-        const query = searchQuery.value.toLowerCase();
-        filtered = filtered.filter(movie => 
-            movie.title.toLowerCase().includes(query) ||
-            movie.overview.toLowerCase().includes(query)
-        );
-    }
-    
-    return filtered;
+    const query = searchQuery.value.toLowerCase();
+    return props.watched.filter(movie => 
+        movie.title.toLowerCase().includes(query) ||
+        movie.overview.toLowerCase().includes(query)
+    );
 });
 
 // Paginated movies for display
@@ -161,12 +110,6 @@ const displayedMovies = computed(() => {
     const start = 0;
     const end = currentPage.value * itemsPerPage;
     return filteredMovies.value.slice(start, end);
-});
-
-// Reset pagination when filters change
-watch([selectedGenre, searchQuery], () => {
-    currentPage.value = 1;
-    loading.value = false;
 });
 
 // Infinite scroll handler
@@ -184,18 +127,6 @@ onMounted(() => {
     });
 });
 
-// Section heading
-const sectionHeading = computed(() => {
-    if (searchQuery.value) {
-        return `Search Results: ${searchQuery.value}`;
-    }
-    if (!selectedGenre.value) {
-        return 'All Movies';
-    }
-    const genre = props.genres.find(g => g.id.toString() === selectedGenre.value);
-    return genre ? genre.name : 'Movies';
-});
-
 const openMovieModal = (movie) => {
     selectedMovie.value = movie;
     showTrailerModal.value = true;
@@ -203,15 +134,6 @@ const openMovieModal = (movie) => {
 </script>
 
 <style scoped>
-.vh-80 {
-    height: 80vh;
-}
-
-.hero-image-bg {
-    object-fit: cover;
-    filter: brightness(0.7);
-}
-
 .bg-dark-gradient {
     background: linear-gradient(to bottom, transparent, rgba(0,0,0,0.9));
     transition: opacity 0.3s;
@@ -230,13 +152,6 @@ const openMovieModal = (movie) => {
 .card:hover {
     transform: scale(1.05);
     box-shadow: 0 0 20px rgba(0,0,0,0.5);
-}
-
-
-@media (max-width: 768px) {
-    .vh-80 {
-        height: 60vh;
-    }
 }
 
 .scrollbar-dark {

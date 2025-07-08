@@ -16,6 +16,12 @@ Route::get('/', function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [App\Http\Controllers\MovieController::class, 'dashboard'])->name('dashboard');
+    Route::get('/watchlist/check/{movie}', [App\Http\Controllers\MovieController::class, 'check'])->name('watchlist.check');
+    Route::post('/watchlist/toggle/{movie}', [App\Http\Controllers\MovieController::class, 'toggleWatchlist'])->name('watchlist.toggle');
+    Route::get('/watchlist', [App\Http\Controllers\MovieController::class, 'watchlist'])->name('watchlist.dashboard');
+    Route::get('/watched', [App\Http\Controllers\MovieController::class, 'watched'])->name('watched.dashboard');
+    Route::get('/watched/check/{movie}', [App\Http\Controllers\MovieController::class, 'checkWatched'])->name('watched.check');
+    Route::post('/watched/toggle/{movie}', [App\Http\Controllers\MovieController::class, 'toggleWatched'])->name('watched.toggle');
     Route::post('/movies/scan', [App\Http\Controllers\MovieController::class, 'scanMovies'])->name('movies.scan');  
     Route::get('/movies/{id}/secure-url', [App\Http\Controllers\MovieController::class, 'getSecureVideoUrl'])->name('movies.secure-url');
     Route::get('/movies/stream/{token}', [App\Http\Controllers\MovieController::class, 'streamVideo'])->name('movies.stream');  
