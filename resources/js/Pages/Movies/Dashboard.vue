@@ -130,7 +130,7 @@ const selectedGenre = ref(null);
 const searchQuery = ref('');
 const loading = ref(false);
 const observerTarget = ref(null);
-const itemsPerPage = 24;
+const itemsPerPage = 6;
 const currentPage = ref(1);
 
 // Filter movies based on genre and search
@@ -165,7 +165,7 @@ const displayedMovies = computed(() => {
 
 // Reset pagination when filters change
 watch([selectedGenre, searchQuery], () => {
-    currentPage.value = 1;
+    currentPage.value = 0;
     loading.value = false;
 });
 
