@@ -7,7 +7,9 @@ use App\Models\Genre;
 use App\Models\Watchlist;
 use App\Models\Watched;
 use App\Services\TmdbService;
-use Illuminate\Http\Client\Request;
+// use Illuminate\Http\Client\Request;
+use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -22,17 +24,160 @@ class MovieController extends Controller
     ) {}
 
     
-    public function dashboard()
-    {
-       $query = Movie::with('genres')
-        ->whereDoesntHave('watched', function($query) {
-            $query->where('user_id', Auth::id());
-        })
-        ->orderBy('release_date', 'desc');
+    // public function dashboard()
+    // {
+    //    $query = Movie::with('genres')
+    //     ->whereDoesntHave('watched', function($query) {
+    //         $query->where('user_id', Auth::id());
+    //     })
+    //     ->orderBy('release_date', 'desc');
 
-        // Get all movies at once since we'll handle pagination client-side
-        $movies = $query->get()
-            ->map(function ($movie) {
+    //     // Get all movies at once since we'll handle pagination client-side
+    //     $movies = $query->get()
+    //         ->map(function ($movie) {
+    //             return [
+    //                 'id' => $movie->id,
+    //                 'tmdb_id' => $movie->tmdb_id,
+    //                 'title' => $movie->title,
+    //                 'overview' => $movie->overview,
+    //                 'poster_path' => $movie->poster_path 
+    //                     ? "https://image.tmdb.org/t/p/w500" . $movie->poster_path 
+    //                     : null,
+    //                 'backdrop_path' => $movie->backdrop_path 
+    //                     ? "https://image.tmdb.org/t/p/original" . $movie->backdrop_path 
+    //                     : null,
+    //                 'release_date' => $movie->release_date,
+    //                 'vote_average' => $movie->vote_average,
+    //                 'local_path' => $movie->local_path,
+    //                 'trailer_url' => $movie->trailer_url,
+    //                 'director' => $movie->director,
+    //                 'cast' => $movie->cast,
+    //                 'runtime' => $movie->runtime,
+    //                 'genres' => $movie->genres->map(fn($genre) => [
+    //                     'id' => $genre->id,
+    //                     'name' => $genre->name
+    //                 ]),
+    //             ];
+    //         });
+
+    //     // Get featured movies for carousel
+    //     $carouselMovies = $movies->take(10);
+
+    //     return Inertia::render('Movies/Dashboard', [
+    //         'movies' => $movies,
+    //         'genres' => Genre::orderBy('name')->get(),
+    //         'carouselMovies' => $carouselMovies
+    //     ]);
+    // }
+
+    public function dashboard(Request $request)
+    {
+        $perPage = 6;
+
+        // Start query builder with eager loading
+        $query = Movie::with('genres')
+            ->whereDoesntHave('watched', function($query) {
+                $query->where('user_id', Auth::id());
+            })
+            ->orderBy('release_date', 'desc');
+
+        // Apply genre filter if present
+        if ($request->genre) {
+            $genreId = (int)$request->genre;
+            
+            // Get the base count of movies in this genre
+            $genreQuery = clone $query;
+            $genreCount = $genreQuery->whereHas('genres', function($q) use ($genreId) {
+                $q->where('genres.id', $genreId);
+            })->count();
+            
+            // Apply genre filter to main query
+            $query->whereHas('genres', function($q) use ($genreId) {
+                $q->where('genres.id', $genreId);
+            });           
+           
+        }
+
+        // Apply search filter if present
+        if ($request->search) {
+            $query->where(function($q) use ($request) {
+                $q->where('title', 'like', '%' . $request->search . '%')
+                  ->orWhere('overview', 'like', '%' . $request->search . '%');
+            });
+        }
+
+        // Get paginated results with query string appending
+        $movies = $query->paginate($perPage)->withQueryString();
+
+        // Transform the paginated data
+        $transformedData = $movies->getCollection()->map(function($movie) {
+            return [
+                'id' => $movie->id,
+                'tmdb_id' => $movie->tmdb_id,
+                'title' => $movie->title,
+                'overview' => $movie->overview,
+                'poster_path' => $movie->poster_path 
+                    ? "https://image.tmdb.org/t/p/w500" . $movie->poster_path 
+                    : null,
+                'backdrop_path' => $movie->backdrop_path 
+                    ? "https://image.tmdb.org/t/p/original" . $movie->backdrop_path 
+                    : null,
+                'release_date' => $movie->release_date,
+                'vote_average' => $movie->vote_average,
+                'local_path' => $movie->local_path,
+                'trailer_url' => $movie->trailer_url,
+                'director' => $movie->director,
+                'cast' => $movie->cast,
+                'runtime' => $movie->runtime,
+                'genres' => $movie->genres->map(fn($genre) => [
+                    'id' => $genre->id,
+                    'name' => $genre->name
+                ]),
+            ];
+        });
+
+        // Replace the collection in the paginator with the transformed data
+        $movies->setCollection($transformedData);
+
+        // Log::info('Final pagination state:', [
+        //     'total_movies' => $movies->total(),
+        //     'current_page' => $movies->currentPage(),
+        //     'last_page' => $movies->lastPage(),
+        //     'per_page' => $perPage,
+        //     'has_more_pages' => $movies->hasMorePages(),
+        //     'is_genre_filtered' => isset($request->genre),
+        //     'genre_id' => $request->genre ? (int)$request->genre : null
+        // ]);
+
+        return Inertia::render('Movies/Dashboard', [
+            'movies' => [
+                'data' => $movies->items(),
+                'current_page' => (int)$movies->currentPage(),
+                'last_page' => (int)$movies->lastPage(),
+                'total' => $movies->total(),
+                'per_page' => $perPage,
+                'has_more_pages' => $movies->hasMorePages()
+            ],
+            'genres' => Genre::orderBy('name')->get(),
+            'carouselMovies' => !$request->genre && !$request->search ? $this->getCarouselMovies() : [],
+            'filters' => [
+                'genre' => $request->genre ? (int)$request->genre : null,
+                'search' => $request->search
+            ]
+        ]);
+    }
+    
+    private function getCarouselMovies()
+    {
+        return Movie::with('genres')
+            ->whereDoesntHave('watched', function($query) {
+                $query->where('user_id', Auth::id());
+            })
+            ->orderBy('release_date', 'desc')
+            ->take(10)
+            ->get()
+            ->map(function($movie) {
+                // Use the same transformation as the main query
                 return [
                     'id' => $movie->id,
                     'tmdb_id' => $movie->tmdb_id,
@@ -57,16 +202,8 @@ class MovieController extends Controller
                     ]),
                 ];
             });
-
-        // Get featured movies for carousel
-        $carouselMovies = $movies->take(10);
-
-        return Inertia::render('Movies/Dashboard', [
-            'movies' => $movies,
-            'genres' => Genre::orderBy('name')->get(),
-            'carouselMovies' => $carouselMovies
-        ]);
     }
+   
 
     public function watchlist()
     {

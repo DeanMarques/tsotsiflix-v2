@@ -15,7 +15,7 @@ Route::get('/', function () {
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/dashboard', [App\Http\Controllers\MovieController::class, 'dashboard'])->name('dashboard');
+    Route::any('/dashboard', [App\Http\Controllers\MovieController::class, 'dashboard'])->name('dashboard');
     Route::get('/watchlist/check/{movie}', [App\Http\Controllers\MovieController::class, 'check'])->name('watchlist.check');
     Route::post('/watchlist/toggle/{movie}', [App\Http\Controllers\MovieController::class, 'toggleWatchlist'])->name('watchlist.toggle');
     Route::get('/watchlist', [App\Http\Controllers\MovieController::class, 'watchlist'])->name('watchlist.dashboard');
